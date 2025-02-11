@@ -1,36 +1,37 @@
-package auth
+package handlers
 
-import "database/sql"
+import (
+	"log"
+	"gorm.io/gorm"
+	"gorm.io/driver/sqlite"
+)
 
-var Db *sql.DB
+var Db *gorm.DB 
 
-func CreateMoveTable() error {
-	query := `
-	CREATE TABLE IF NOT EXISTS users (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	user TEXT NOT NULL,
-	email  UNIQUE TEXT NOT NULL,
-	password TEXT NOT NULL
-	);`
+	
+// User represents the users table structure
 
-	if _, err := Db.Exec(query); err != nil {
-		return err
-	}
-
-	return nil
+func CreateMoveTable(db *gorm.DB) error {
+	return db.AutoMigrate(&User{})
 }
 
 func StartDbConn() error {
-
 	var err error
-
-	Db, err := sql.Open("sqlite3", "mydatabase.db")
+	Db, err = gorm.Open(sqlite.Open("mydatabase.db"), &gorm.Config{})
 	if err != nil {
 		return err
 	}
 
-	if err = Db.Ping(); err != nil {
+	sqlDB, err := Db.DB()
+	if err != nil {
 		return err
 	}
+
+	// Check the connection
+	if err = sqlDB.Ping(); err != nil {
+		return err
+	}
+
+	log.Println("Database connected successfully")
 	return nil
 }

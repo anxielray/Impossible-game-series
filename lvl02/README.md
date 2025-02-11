@@ -16,7 +16,7 @@
 * ```
 
   ```
-* The game starts with the initial state `<strong>`0001`</strong>`.
+* The game starts with the initial state `<strong>`0001 `</strong>`.
 * The goal is to manipulate the sequence until it reaches the target state `<strong>0000</strong>`.
 
 ## Example Gameplay
