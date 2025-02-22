@@ -1,18 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <title>The Impossible Game</title>
-
-    <!-- Bootstrap CDN -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-
     <style>
         .form-control {
-            width: 80px;
-            height: 80px;
-            font-size: 4em;
+            width: 50px;
+            height: 50px;
+            font-size: 2em;
             text-align: center;
             color: blue;
             background-color: gray;
@@ -37,17 +33,19 @@
             gap: 5px;
         }
         .prev-values {
-            font-size: 1.5em;
+            font-size: 2em;
             font-weight: bold;
             color: darkblue;
             margin-bottom: 10px;
-        }
-        .btn-warning.active {
-            background-color: darkorange !important;
+            border: 2px solid black;
+            padding: 10px;
+            display: inline-block;
+            min-width: 60px;
+            background-color: white;
         }
         .btn-warning {
-            font-size: 1.2em;
-            padding: 8px 16px;
+            font-size: 1em;
+            padding: 5px 10px;
         }
         .move-display {
             margin-top: 20px;
@@ -56,6 +54,10 @@
             display: flex;
             justify-content: center;
             flex-wrap: wrap;
+        }
+        .highlight {
+            background-color: yellow;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -68,132 +70,61 @@
             You have 4 boxes, and you are only allowed to enter values [0, 1, 2].
             In each step, you must retain one value in its current state.
             Make the values become 0000 to win the Game!
-        </p>
+        </p><div class="move-display" id="current-number">0001</div>
 
-        <!-- Display Submitted Values -->
-
-        <form action="/step" method="POST">
-            <div class="game-grid">
-                <div>
-                    <p class="prev-values" id="prev-first"></p>
-                    <textarea class="form-control" name="first" id="first-value" rows="1"></textarea>
-                </div>
-                <div>
-                    <p class="prev-values" id="prev-second"></p>
-                    <textarea class="form-control" name="second" id="second-value" rows="1"></textarea>
-                </div>
-                <div>
-                    <p class="prev-values" id="prev-third"></p>
-                    <textarea class="form-control" name="third" id="third-value" rows="1"></textarea>
-                </div>
-                <div>
-                    <p class="prev-values" id="prev-fourth"></p>
-                    <textarea class="form-control" name="fourth" id="fourth-value" rows="1"></textarea>
-                </div>
-            </div>
-
-            <div class="list-group">
-                <button type="button" class="btn btn-warning" id="block-fst">Block</button>
-                <button type="button" class="btn btn-warning" id="block-scnd">Block</button>
-                <button type="button" class="btn btn-warning" id="block-thrd">Block</button>
-                <button type="button" class="btn btn-warning" id="block-frth">Block</button>
-            </div>
-
-            <button type="submit" class="btn btn-primary mt-3">Submit</button>
-        </form>
-
-        <div class="move-display" id="move-history"></div>
-
-        <footer class="mt-4">
-            <a target="_blank" href="https://martinraymondogwel.netlify.app" class="text-decoration-none">Creator: Raymond Martin</a>
-        </footer>
+    <div class="game-grid">
+        <p class="prev-values" id="prev-first">0</p>
+        <p class="prev-values" id="prev-second">0</p>
+        <p class="prev-values" id="prev-third">0</p>
+        <p class="prev-values" id="prev-fourth">1</p>
     </div>
 
-    <script>
-        // Ensure only 0, 1, or 2 can be entered
-        document.querySelectorAll(".form-control").forEach(textarea => {
-            textarea.addEventListener("input", function() {
-                this.value = this.value.replace(/[^0-2]/g, ''); // Allow only 0, 1, or 2
-                if (this.value.length > 1) {
-                    this.value = this.value.slice(-1); // Keep only the last entered digit
-                }
-            });
-        });
+    <div class="list-group">
+        <button type="button" class="btn btn-warning" id="block-0">Block</button>
+        <button type="button" class="btn btn-warning" id="block-1">Block</button>
+        <button type="button" class="btn btn-warning" id="block-2">Block</button>
+        <button type="button" class="btn btn-warning" id="block-3">Block</button>
+    </div>
+</div>
 
-        const blockButtons = document.querySelectorAll(".btn-warning");
-        const textAreas = document.querySelectorAll(".form-control");
-        const moveHistoryDiv = document.getElementById("move-history");
+<script>
+    const blockButtons = document.querySelectorAll(".btn-warning");
+    const prevValues = document.querySelectorAll(".prev-values");
+    const currentNumberDisplay = document.getElementById("current-number");
+    let currentNumber = [0, 0, 0, 1];
+    let previousMoves = new Set();
 
-        let previousMoves = []; // To store entered sequences
-
-        // Function to update the displayed moves history
-        function updateMoveHistory() {
-            moveHistoryDiv.innerHTML = ""; // Clear the current history
-            previousMoves.forEach((move, index) => {
-                const moveDiv = document.createElement("div");
-                moveDiv.textContent = `Move ${index + 1}: ${move}`;
-                moveHistoryDiv.appendChild(moveDiv);
-            });
+    function cycleNumbers(blockedIndex) {
+        for (let i = 0; i < currentNumber.length; i++) {
+            if (i !== blockedIndex) {
+                currentNumber[i] = (currentNumber[i] + 1) % 3;
+            }
         }
+        return currentNumber.join("");
+    }
 
-        blockButtons.forEach((button, index) => {
-            button.addEventListener("click", function() {
-                // Reset all buttons and textareas
-                blockButtons.forEach(btn => btn.classList.remove("active"));
-                textAreas.forEach(area => area.removeAttribute("readonly"));
-
-                // Set clicked button to active and disable other buttons
-                this.classList.add("active");
-                blockButtons.forEach(btn => {
-                    if (btn !== this) btn.setAttribute("disabled", "true");
+    blockButtons.forEach((button, index) => {
+        button.addEventListener("click", function () {
+            blockButtons.forEach(btn => btn.setAttribute("disabled", "true"));
+            const newSequence = cycleNumbers(index);
+            if (previousMoves.has(newSequence)) {
+                alert("Failed! Timed out.");
+            } else {
+                previousMoves.add(newSequence);
+                currentNumberDisplay.textContent = newSequence;
+                prevValues.forEach((p, i) => {
+                    p.textContent = currentNumber[i];
                 });
-
-                // Make the corresponding textarea read-only
-                textAreas[index].setAttribute("readonly", "true");
-            });
-        });
-
-        document.querySelector("form").addEventListener("submit", function(event) {
-            event.preventDefault(); // Prevent actual form submission
-
-            // Get values from the textareas
-            const values = Array.from(textAreas).map(area => area.value || "0");
-
-            // Update the sequence for the player
-            let newSequence = values.join("");
-
-            // Check if the sequence has been encountered before (for losing condition)
-            if (previousMoves.includes(newSequence)) {
-                window.location.href = "/loose"; // Redirect to loose page
-                return;
             }
-
-            // Add the new sequence to history and update display
-            previousMoves.push(newSequence);
-            updateMoveHistory();
-
-            // Update previous values display
-            document.getElementById("prev-first").textContent = values[0];
-            document.getElementById("prev-second").textContent = values[1];
-            document.getElementById("prev-third").textContent = values[2];
-            document.getElementById("prev-fourth").textContent = values[3];
-
-            // If the sequence is "0000", redirect to win page
             if (newSequence === "0000") {
-                window.location.href = "/win"; // Redirect to win page
+                alert("Congratulations!");
             }
-
-            // Reset the form after submission
-            textAreas.forEach(area => area.value = "");
-            blockButtons.forEach(btn => {
-                btn.classList.remove("active");
-                btn.removeAttribute("disabled");
-            });
-            textAreas.forEach(area => area.removeAttribute("readonly"));
+            blockButtons.forEach(btn => btn.removeAttribute("disabled"));
         });
-    </script>
+    });
+</script>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 </body>
 </html>
