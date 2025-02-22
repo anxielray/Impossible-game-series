@@ -6,9 +6,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <style>
         .form-control {
-            width: 50px;
-            height: 50px;
-            font-size: 2em;
+            width: 80px;
+            height: 80px;
+            font-size: 4em;
             text-align: center;
             color: blue;
             background-color: gray;
@@ -27,25 +27,25 @@
             margin-bottom: 15px;
         }
         .list-group {
-            margin-top: 10px;
             display: flex;
             justify-content: center;
             gap: 5px;
-        }
-        .prev-values {
-            font-size: 2em;
-            font-weight: bold;
-            color: darkblue;
-            margin-bottom: 10px;
-            border: 2px solid black;
-            padding: 10px;
-            display: inline-block;
-            min-width: 60px;
-            background-color: white;
+            flex-direction: row;
+            margin-top: 10px;
         }
         .btn-warning {
-            font-size: 1em;
-            padding: 5px 10px;
+            font-size: 1.2em;
+            padding: 8px 16px;
+            transition: all 0.3s ease;
+        }
+        .btn-warning.active, .form-control.blocked {
+            background-color: darkorange !important;
+            box-shadow: 0 0 10px red;
+            animation: glow 1s infinite alternate;
+        }
+        @keyframes glow {
+            from { box-shadow: 0 0 10px red; }
+            to { box-shadow: 0 0 20px red; }
         }
         .move-display {
             margin-top: 20px;
@@ -55,9 +55,15 @@
             justify-content: center;
             flex-wrap: wrap;
         }
-        .highlight {
-            background-color: yellow;
+        .number-box {
+            display: inline-block;
+            font-size: 2em;
             font-weight: bold;
+            padding: 10px;
+            margin: 5px;
+            border: 2px solid black;
+            border-radius: 8px;
+            background-color: lightgray;
         }
     </style>
 </head>
@@ -66,65 +72,80 @@
         <h1 class="text-primary">Welcome to the Impossible Game!</h1>
         <h2 class="text-secondary">Make a change in the world of Math</h2>
         <p class="fw-bold">Rules:</p>
-        <p class="text-muted">
-            You have 4 boxes, and you are only allowed to enter values [0, 1, 2].
+        <p class="text-muted">You have 4 boxes, and you are only allowed to enter values [0, 1, 2].
             In each step, you must retain one value in its current state.
             Make the values become 0000 to win the Game!
-        </p><div class="move-display" id="current-number">0001</div>
-
-    <div class="game-grid">
-        <p class="prev-values" id="prev-first">0</p>
-        <p class="prev-values" id="prev-second">0</p>
-        <p class="prev-values" id="prev-third">0</p>
-        <p class="prev-values" id="prev-fourth">1</p>
+        </p>
+        <div class="move-display" id="move-history"></div>
+        <div class="game-grid">
+            <textarea class="form-control" id="first-value" rows="1" readonly>0</textarea>
+            <textarea class="form-control" id="second-value" rows="1" readonly>0</textarea>
+            <textarea class="form-control" id="third-value" rows="1" readonly>0</textarea>
+            <textarea class="form-control" id="fourth-value" rows="1" readonly>1</textarea>
+        </div>
+        <div class="list-group">
+            <button type="button" class="btn btn-warning" id="block-fst">Block</button>
+            <button type="button" class="btn btn-warning" id="block-scnd">Block</button>
+            <button type="button" class="btn btn-warning" id="block-thrd">Block</button>
+            <button type="button" class="btn btn-warning" id="block-frth">Block</button>
+        </div>
     </div>
+    <script>
+        const blockButtons = document.querySelectorAll(".btn-warning");
+        const textAreas = document.querySelectorAll(".form-control");
+        let previousMoves = ["0001"];blockButtons.forEach((button, index) => {
+        button.addEventListener("click", function() {
+            blockButtons.forEach(btn => btn.classList.remove("active"));
+            textAreas.forEach(area => area.classList.remove("blocked"));
+            
+            this.classList.add("active");
+            textAreas[index].classList.add("blocked");
+            
+            textAreas.forEach((area, i) => {
+                if (i !== index) {
+                    area.value = (parseInt(area.value) + 1) % 3;
+                }
+            });
 
-    <div class="list-group">
-        <button type="button" class="btn btn-warning" id="block-0">Block</button>
-        <button type="button" class="btn btn-warning" id="block-1">Block</button>
-        <button type="button" class="btn btn-warning" id="block-2">Block</button>
-        <button type="button" class="btn btn-warning" id="block-3">Block</button>
-    </div>
-</div>
-
-<script>
-    const blockButtons = document.querySelectorAll(".btn-warning");
-    const prevValues = document.querySelectorAll(".prev-values");
-    const currentNumberDisplay = document.getElementById("current-number");
-    let currentNumber = [0, 0, 0, 1];
-    let previousMoves = new Set();
-
-    function cycleNumbers(blockedIndex) {
-        for (let i = 0; i < currentNumber.length; i++) {
-            if (i !== blockedIndex) {
-                currentNumber[i] = (currentNumber[i] + 1) % 3;
-            }
-        }
-        return currentNumber.join("");
-    }
-
-    blockButtons.forEach((button, index) => {
-        button.addEventListener("click", function () {
-            blockButtons.forEach(btn => btn.setAttribute("disabled", "true"));
-            const newSequence = cycleNumbers(index);
-            if (previousMoves.has(newSequence)) {
+            let newSequence = Array.from(textAreas).map(area => area.value).join("");
+            if (previousMoves.includes(newSequence)) {
                 alert("Failed! Timed out.");
-            } else {
-                previousMoves.add(newSequence);
-                currentNumberDisplay.textContent = newSequence;
-                prevValues.forEach((p, i) => {
-                    p.textContent = currentNumber[i];
-                });
+                return;
             }
+
+            previousMoves.push(newSequence);
+            updateMoveHistory(newSequence);
+
             if (newSequence === "0000") {
                 alert("Congratulations!");
+                confettiEffect();
             }
-            blockButtons.forEach(btn => btn.removeAttribute("disabled"));
         });
     });
-</script>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    function updateMoveHistory(sequence) {
+        const moveHistoryDiv = document.getElementById("move-history");
+        moveHistoryDiv.innerHTML = "";
+        sequence.split("").forEach(num => {
+            const div = document.createElement("div");
+            div.classList.add("number-box");
+            div.textContent = num;
+            moveHistoryDiv.appendChild(div);
+        });
+    }
+
+    function confettiEffect() {
+        const confetti = document.createElement("div");
+        confetti.innerHTML = "🎉";
+        confetti.style.position = "absolute";
+        confetti.style.top = "50%";
+        confetti.style.left = "50%";
+        confetti.style.transform = "translate(-50%, -50%)";
+        confetti.style.fontSize = "4em";
+        document.body.appendChild(confetti);
+        setTimeout(() => confetti.remove(), 2000);
+    }
+</script>
 
 </body>
 </html>
